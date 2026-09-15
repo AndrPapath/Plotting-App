@@ -1,3 +1,6 @@
+# Copyright 2024-2026 Andreas Papathanasiou
+# SPDX-License-Identifier: Apache-2.0
+
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
@@ -8,7 +11,6 @@ from pandas import *
 
 path = input("CSV files path: ")
 destpath = input("Destination path: ")
-colors = ['red', 'green', 'blue']
 while(True):
     # folderpath = input("File folder: ") 
     # circuit = input("Circuit name: ")
@@ -26,48 +28,38 @@ while(True):
     names = np.array([])
     legend = np.array([])
 
-    data = read_csv(filename + '.csv')
+    data = read_csv(path+filename)
     fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
-    line = 4
-    with open(filename + '.csv') as csv_file:
+    line = 2.4
+    with open(path+filename) as csv_file:
         csv_reader = list(csv.reader(csv_file, delimiter=','))
         name_index=0
-        plt_index=0
-        plots = []
         for name in csv_reader[0]:
             names = np.append(names, [name])
-            if name_index%2 == 0:
-                y = data[name].to_numpy()*y_norm
+            if name_index == 0:
+                x = data[names[0]].to_numpy()*x_norm
             #print(name)
             #print(name_index)
-            else:
+            if name_index != 0:
                 #legend = np.append(legend, getLegend(name))
                 #print()
-                x = data[name].to_numpy()*x_norm
-                l, = ax.semilogx(x, y, label=name, linewidth = line)#, marker='o')
-                if plt_index == 1:
-                    l.set_linestyle('-.')
-                    #l.set_linewidth(5)
-                elif plt_index == 0:
-                    l.set_linestyle('-')
-                else:
-                    l.set_linestyle('--')
-                plt_index+=1
+                y = data[name].to_numpy()*y_norm
+                ax.plot(x, y, label=name, linewidth = line)#, marker)
             name_index += 1
 
     font_size = 18
+    
+    
     ax.set_title(title)
     ax.grid(True)
-    #plt.xlabel(names[0])
-    plt.ylabel(y_label, fontsize=font_size+4)
-    plt.xlabel(x_label, fontsize=font_size+4)
+    ax.legend(loc = legend_loc, fontsize=font_size-2)
+    plt.xlabel(names[0])
+    plt.ylabel('$' + y_label + '$', fontsize=font_size+4)
+    plt.xlabel('$' + x_label + '$', fontsize=font_size+4)
     plt.xticks(fontsize=font_size)
     plt.yticks(fontsize=font_size)
-    
-    ax.legend(loc = legend_loc, fontsize=font_size-2)
     fig = plt.gcf()
     plt.show()
-
     if input("Save to PDF? (y/n): ") == 'y':
         fig.savefig(filename + '.pdf')
         print("Saved in: " + filename + '.pdf')

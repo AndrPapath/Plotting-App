@@ -1,3 +1,6 @@
+# Copyright 2024-2026 Andreas Papathanasiou
+# SPDX-License-Identifier: Apache-2.0
+
 try:
     import csv
     from pandas import read_csv

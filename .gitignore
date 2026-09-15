@@ -14,3 +14,11 @@ Thumbs.db
 *.pdf
 *.xlsx
 *.csv
+# Build artifacts
+build/
+dist/
+*.spec.bak
+
+# Virtualenvs
+.venv/
+venv/

@@ -1,3 +1,6 @@
+# Copyright 2024-2026 Andreas Papathanasiou
+# SPDX-License-Identifier: Apache-2.0
+
 import csv
 from matplotlib.backend_bases import FigureCanvasBase
 import numpy as np
@@ -12,6 +15,7 @@ from order_of_magnitude import order_of_magnitude
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+import importlib
 
 class ScrollableFrame(Frame):
     def __init__(self, container, *args, **kwargs):
@@ -233,22 +237,15 @@ class PlottingApp(Tk):
 
         self.histogram_items_config = {}
 
+        self.panel_vars = {}
+        self.current_plot_module = None
         self.side_panel = ScrollableFrame(self, relief='sunken', borderwidth=5)
         self.side_panel.grid(row=1, column=1, sticky='nsew')
 
-        self.panel_plain = Frame(master=self.side_panel.scrollable_frame)
-        self.panel_parametric = Frame(master=self.side_panel.scrollable_frame)
-        self.panel_histogram = Frame(master=self.side_panel.scrollable_frame)
-
-        self.current_panel = None  # To keep track of the currently displayed panel
-
-        self.fig = Figure(figsize=(5, 4), dpi=100, layout='constrained')
-        self.axs = self.fig.add_subplot()
-        self.twin_x_axs = self.axs.twinx()
-        self.color1 = 'red'
-        self.color2 = 'red'
-        self.line1 = None
-        self.line2 = None
+        self.plot_mode = StringVar()
+        self.plot_mode.set(self.options[0])
+        self.plotTypeDrop = OptionMenu(self, self.plot_mode, *self.options, command=self.switch_panel)
+        self.plotTypeDrop.grid(row=0, column=1, sticky='nsew')
 
         self.create_canvas()
 
@@ -279,91 +276,69 @@ class PlottingApp(Tk):
         self.toolbar.grid(row=2, column=0, sticky='nsew')
 
     def create_gui(self):
-        # ... your existing GUI creation code ...
-
-        self.create_side_panel()
+        self.switch_panel(self.plot_mode.get())
         self.create_top_panel()
 
-    def create_side_panel(self):
-        self.create_common_items(self.panel_plain)
-        self.create_parametric_items(self.panel_parametric)
-        self.create_histogram_items(self.panel_histogram)
+    def switch_panel(self, panel_type, *_):
+        # Remove current panel widgets
+        for widget in self.side_panel.scrollable_frame.winfo_children():
+            widget.destroy()
+        # Dynamically import the plot module
+        module_name = {
+            "Plain": "plotting.csv_plot",
+            "Parametric": "plotting.parametrics_plot",
+            "Histogram": "plotting.coordinate_plot",  # or your histogram module
+        }[panel_type]
+        self.current_plot_module = importlib.import_module(module_name)
+        # Get the side panel items
+        panel_items = self.current_plot_module.get_side_panel_items()
+        # Store Tkinter variables for each field
+        self.panel_vars = {}
+        row = 0
+        for label, config in panel_items.items():
+            Label(self.side_panel.scrollable_frame, text=label).grid(row=row, column=0, sticky=W, pady=5)
+            var_type = config["type"]
+            default = config["default"]
+            if var_type == "entry":
+                var = StringVar(value=default)
+                Entry(self.side_panel.scrollable_frame, textvariable=var).grid(row=row, column=1, pady=5)
+            elif var_type == "int_entry":
+                var = IntVar(value=default)
+                Spinbox(self.side_panel.scrollable_frame, from_=0, to=100, textvariable=var).grid(row=row, column=1, pady=5)
+            elif var_type == "float_entry":
+                var = StringVar(value=str(default))
+                Entry(self.side_panel.scrollable_frame, textvariable=var).grid(row=row, column=1, pady=5)
+            elif var_type == "bool":
+                var = BooleanVar(value=default)
+                Checkbutton(self.side_panel.scrollable_frame, variable=var).grid(row=row, column=1, pady=5)
+            elif var_type == "dropdown":
+                var = StringVar(value=default)
+                OptionMenu(self.side_panel.scrollable_frame, var, *config["options"]).grid(row=row, column=1, pady=5)
+            elif var_type == "radio":
+                var = IntVar(value=default)
+                Radiobutton(self.side_panel.scrollable_frame, variable=var, value=default).grid(row=row, column=1, pady=5)
+            self.panel_vars[label] = var
+            row += 1
+        Button(self.side_panel.scrollable_frame, text="Refresh", command=self.plot_refresh).grid(row=row, column=0, columnspan=2, pady=5)
 
-        self.switch_panel("Plain")  # Display the default panel
-
-    def create_top_panel(self):
-        # ... your existing code for creating the top panel ...
-        topPanel = Frame(master=self, relief='raised', borderwidth=5)
-
-        # Buttons
-        loadButton = Button(self, text='Load', width=25, command=self.select_file)
-        plotButton = Button(topPanel, text='Plot', width=5, command=lambda: self.plot_draw())
-        replaceButton = Button(topPanel, text='Replace', width=5, command=lambda: [self.plot_clear(), self.plot_draw()])
-        clearButton = Button(topPanel, text='Clear', width=5, command=self.plot_clear)
-
-        loadButton.grid(row=2, column=1, sticky='nsew')
-        plotButton.grid(row=0, column=0, sticky='nw')
-        replaceButton.grid(row=0, column=1, sticky='nw')
-        clearButton.grid(row=0, column=2, sticky='nw')
-        topPanel.grid(row=0, column=0, sticky='nswe')
-        return
-    
-    def create_common_items(self, panel):
-        self.row_counter = 0
-        self.create_items(panel, self.common_items_config)
-        # Create a button (customize as needed)
-        Button(panel, text="Refresh", command=self.plot_refresh).grid(row=self.row_counter, column=0, columnspan=2, pady=5)
-
-    def create_parametric_items(self, panel):
-        self.row_counter = 0
-        self.create_items(panel, self.common_items_config)
-        self.create_items(panel, self.parametric_items_config)
-        # Create a button (customize as needed)
-        Button(panel, text="Refresh", command=self.plot_refresh).grid(row=self.row_counter, column=0, columnspan=2, pady=5)
-
-    def create_histogram_items(self, panel):
-        self.row_counter = 0
-        self.create_items(panel, self.common_items_config)
-        self.create_items(panel, self.histogram_items_config)
-        # Create a button (customize as needed)
-        Button(panel, text="Refresh", command=self.plot_refresh).grid(row=self.row_counter, column=0, columnspan=2, pady=5)
-        
-    def create_items(self, panel, items):
-        for label, config in items.items():
-            Label(panel, text=label).grid(row=self.row_counter, column=0, sticky=W, pady=5)
-
-            widget_type = config["widget"]
-            options = config.get("options", {})  # Additional options for the widget
-            if widget_type == Entry or widget_type==Spinbox:
-                    varname = "textvariable"
-            else: varname = "variable"
-            if widget_type != Entry:
-                options["command"] = self.plot_refresh
-            options[varname] = config["var"]
-            if widget_type == OptionMenu:
-                widget = OptionMenu(panel, options["variable"], *config.get("values"))
-                widget.grid(row=self.row_counter, column=1, pady=5)
-            else:
-                widget = widget_type(panel, **options)
-                widget.grid(row=self.row_counter, column=1, pady=5)
-
-            self.row_counter += 1
-
-    def switch_panel(self, panel_type):
-        # Hide the current panel if it exists
-        if self.current_panel is not None:
-            self.current_panel.grid_remove()
-
-        # Show the selected panel
-        if panel_type == "Plain":
-            self.panel_plain.grid()
-            self.current_panel = self.panel_plain
-        elif panel_type == "Parametric":
-            self.panel_parametric.grid()
-            self.current_panel = self.panel_parametric
-        elif panel_type == "Histogram":
-            self.panel_histogram.grid()
-            self.current_panel = self.panel_histogram
+    def get_panel_options(self):
+        options = {}
+        for label, var in self.panel_vars.items():
+            # Try to convert to float/int if possible
+            value = var.get()
+            try:
+                if isinstance(var, IntVar):
+                    value = int(value)
+                elif isinstance(var, BooleanVar):
+                    value = bool(value)
+                elif isinstance(var, StringVar):
+                    # Try float conversion for float_entry
+                    if any(s in label.lower() for s in ["scale", "tick", "min", "max", "width"]):
+                        value = float(value)
+            except Exception:
+                pass
+            options[label] = value
+        return options
 
     # ... your other methods ...
     def my_sign(self, x):
@@ -454,62 +429,14 @@ class PlottingApp(Tk):
             else:
                 self.fig.legend(loc=loc_, ncols=cols, fontsize=float(font) * 0.8)
 
-    def panel_refresh(self, option):
-        for lst in [self.plain_items, self.param_items, self.hist_items]:
-            for item in lst:
-                item.grid_remove()
-        if option == "Parametric":
-            for item in self.param_items:
-                item.grid()
-        elif option == "Plain":
-            for item in self.plain_items:
-                item.grid()
-        elif option == "Histogram":
-            for item in self.hist_items:
-                item.grid()
-        else:
-            for item in self.plain_items:
-                item.grid()
-
     def plot_draw(self):
-        try:
-            self.color1 = 'red'
-            self.color2 = 'red'
-            self.twin_x_axs.set_axis_off()
-        except Exception as e:
-            print("No twin axis found")
-        mode = self.plot_mode.get()
-        if mode == "Parametric":
-            for trace in self.traces:
-                trace.set_name(self.get_Legend(trace.get_name()))
-        scale_x = float(self.x_scale_entry_var.get())
-        scale_y = float(self.y_scale_entry_var.get())
-
-        x_data_trace = self.traces[self.x_axis.get()]
-        x_data = x_data_trace.data
-        for indx, trace in enumerate(self.traces):
-            if trace.is_visible() == True:
-                if trace.on_twin_x() == True:
-                    self.twin_x_axs.set_axis_on()
-                    self.color2 = self.get_color_from_cycle(indx-1)
-                    self.line2, = self.twin_x_axs.plot(x_data*scale_x, trace.data*scale_y*trace.get_scale(), 
-                                                       label=trace.get_name(), color = self.color2, 
-                                                       linewidth = self.width_var.get())
-                else:
-                    if self.default_colors_var.get():
-                        self.color1 = None
-                    else:
-                        self.color1 = self.get_color_from_cycle(indx-1)
-                    self.line1, = self.axs.plot(x_data*scale_x, trace.data*scale_y*trace.get_scale(), 
-                                                label=trace.get_name(), color = self.color1,
-                                                linewidth = self.width_var.get())
-                xmin = float(self.xmin.get())
-                xmax = float(self.xmax.get())
-                if float(self.x_ticks_entry_var.get()) > 0:
-                    self.axs.xaxis.set_ticks(np.arange(xmin, xmax, step=float(self.x_ticks_entry_var.get())))
-        self.plot_refresh()
-
-        #canvas.draw()
+        if not self.current_plot_module:
+            return
+        options = self.get_panel_options()
+        data = self.current_plot_module.process_data(self.filename, options)
+        self.axs.clear()
+        self.current_plot_module.draw(self.axs, data, options)
+        self.canvas.draw()
 
     def get_Legend(self, title):
             param_name = self.param_name_var.get().split("'")

@@ -1,3 +1,6 @@
+# Copyright 2024-2026 Andreas Papathanasiou
+# SPDX-License-Identifier: Apache-2.0
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcol

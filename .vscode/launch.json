@@ -1,0 +1,27 @@
+{
+    // Both configurations run from the project root, so `import plotting`
+    // and `import gui` resolve no matter which file is open in the editor.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Plotting App",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": { "PYTHONPATH": "${workspaceFolder}" },
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Current File (project root)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": { "PYTHONPATH": "${workspaceFolder}" },
+            "justMyCode": true
+        }
+    ]
+}

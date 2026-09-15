@@ -1,0 +1,12 @@
+{
+    // The project root is the import root; without this, running a file from
+    // gui/ or tests/ cannot see the plotting package.
+    "python.analysis.extraPaths": ["${workspaceFolder}"],
+    "python.autoComplete.extraPaths": ["${workspaceFolder}"],
+    "python.terminal.executeInFileDir": false,
+    "terminal.integrated.env.windows": { "PYTHONPATH": "${workspaceFolder}" },
+    "python.testing.unittestEnabled": true,
+    "python.testing.pytestEnabled": false,
+    "python.testing.cwd": "${workspaceFolder}",
+    "python.testing.unittestArgs": ["-v", "-s", "tests", "-t", ".", "-p", "test_*.py"]
+}
