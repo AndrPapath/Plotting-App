@@ -12,8 +12,6 @@ python app.py
 
 Shortcuts: `Ctrl+O` load, `Ctrl+R` replace, `F5` refresh, `Ctrl+S` save.
 
-
-
 ## Workflow
 
 1. **Load** a file. Every numeric column becomes a *trace*; text columns are
